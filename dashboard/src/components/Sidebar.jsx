@@ -1,32 +1,40 @@
-import React from "react";
+"use client";
 
-function Sidebar() {
+import { useRouter } from "next/navigation";
+
+export default function Sidebar() {
+  const router = useRouter();
+
   return (
-    <div
-      style={{
-        width: "220px",
-        backgroundColor: "#111827",
-        color: "#ffffff",
-        padding: "20px",
-      }}
-    >
-      {/* App Title */}
-      <h2 style={{ marginBottom: "30px" }}>Workshop Admin</h2>
+<aside className="w-64 bg-black min-h-screen p-6">
+      <h2 className="text-xl font-bold mb-8 text-white">
+  CHECKINX-ATHERA
+</h2>
 
-      {/* Menu Items */}
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        <li style={menuStyle}>Dashboard</li>
-        <li style={menuStyle}>Attendance</li>
-        <li style={menuStyle}>Export</li>
-      </ul>
-    </div>
+
+      <nav className="space-y-4">
+        <p
+          onClick={() => router.push("/")}
+          className="text-white font-medium cursor-pointer"
+        >
+          Dashboard
+        </p>
+
+        <p
+          onClick={() => router.push("/attendance")}
+          className="text-gray-400 hover:text-white cursor-pointer">
+          Attendance
+        </p>
+
+        <p
+          onClick={() =>
+            document.getElementById("export-btn")?.click()
+          }
+          className="text-slate-400 hover:text-white cursor-pointer"
+        >
+          Export
+        </p>
+      </nav>
+    </aside>
   );
 }
-
-const menuStyle = {
-  padding: "10px 0",
-  cursor: "pointer",
-  opacity: 0.85,
-};
-
-export default Sidebar;

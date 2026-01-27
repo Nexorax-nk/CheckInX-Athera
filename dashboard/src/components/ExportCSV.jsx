@@ -1,23 +1,24 @@
-import React from "react";
+"use client";
+
+import { useEffect } from "react";
 import { exportToCSV } from "../utils/csvExport";
 
-function ExportCSV({ data }) {
+function ExportCSV({ data, onExportRef }) {
+  useEffect(() => {
+    if (onExportRef) {
+      onExportRef.current = () => exportToCSV(data);
+    }
+  }, [data, onExportRef]);
+
   return (
-    <div style={{ marginBottom: "20px" }}>
-      <button
-        onClick={() => exportToCSV(data)}
-        style={{
-          padding: "10px 16px",
-          backgroundColor: "#2563eb",
-          color: "#ffffff",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-        }}
-      >
-        Export Attendance CSV
-      </button>
-    </div>
+    <button
+  id="export-btn"
+  onClick={() => exportToCSV(data)}
+   className="mb-6 px-6 py-3 rounded-lg bg-black text-white hover:bg-gray-800 transition shadow"
+>
+  Export Attendance CSV
+</button>
+
   );
 }
 

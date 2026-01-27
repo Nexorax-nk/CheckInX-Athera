@@ -1,21 +1,18 @@
-import React, { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import StatsCards from "./StatsCards";
 import AttendanceTable from "./AttendanceTable";
 import ExportCSV from "./ExportCSV";
 import readExcel from "../utils/readExcel";
 
-function Dashboard() {
+function Dashboard({ attendanceRef, onExportRef }) {
   const [data, setData] = useState([]);
 
-  // Load Excel data
+  // Load Excel data + live refresh
   useEffect(() => {
     loadData();
-
-    // LIVE UPDATE (polling every 3 seconds)
-    const interval = setInterval(() => {
-      loadData();
-    }, 3000);
-
+    const interval = setInterval(loadData, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -24,27 +21,41 @@ function Dashboard() {
     setData(excelData);
   };
 
-  // Calculations
+  // Live feed (last 5 attended)
+  const liveEntries = [...data]
+    .filter((d) => d.Attended === true)
+    .slice(-5)
+    .reverse();
+
+  // Stats
   const total = data.length;
   const attended = data.filter((d) => d.Attended === true).length;
   const remaining = total - attended;
 
   return (
     <div>
-      <h1 style={{ marginBottom: "20px" }}>Dashboard</h1>
+     <h1 className="text-3xl font-bold text-gray-900 mb-1">
+  Organizer Dashboard
+</h1>
+<p className="text-gray-500 mb-8">
+  College Workshop 2026 Overview
+</p>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <StatsCards
         total={total}
         attended={attended}
         remaining={remaining}
       />
 
-      {/* Export Button */}
-      <ExportCSV data={data} />
+      {/* Export */}
+      <ExportCSV data={data} onExportRef={onExportRef} />
 
-      {/* Attendance Table */}
-      <AttendanceTable data={data} />
+      {/* LIVE ATTENDANCE FEED */}
+      <div id="attendance-section">
+  <AttendanceTable data={liveEntries} />
+</div>
+
     </div>
   );
 }

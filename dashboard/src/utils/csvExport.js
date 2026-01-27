@@ -1,13 +1,13 @@
 export function exportToCSV(data) {
   if (!data || data.length === 0) {
-    alert("No data available to export");
+    alert("No attendance data to export");
     return;
   }
 
-  // CSV header
+  // CSV headers
   const headers = ["Name", "Email", "Token", "Attended"];
 
-  // Convert rows to CSV format
+  // Convert data to rows
   const rows = data.map((item) => [
     item.Name,
     item.Email,
@@ -21,11 +21,14 @@ export function exportToCSV(data) {
     ...rows.map((row) => row.join(",")),
   ].join("\n");
 
-  // Create file and download
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+  // Create downloadable file
+  const blob = new Blob([csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
 
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+
   link.href = url;
   link.setAttribute("download", "attendance.csv");
   document.body.appendChild(link);
