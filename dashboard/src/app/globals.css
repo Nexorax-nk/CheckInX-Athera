@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+
+
+:root {
+  /* BACKGROUNDS: Light & Clean */
+  --bg-main: #f8fafc;       /* Slate 50 - Very light gray page bg */
+  --bg-card: #ffffff;       /* Pure White - For cards */
+  
+  /* BORDERS */
+  --border-color: #e2e8f0;  /* Slate 200 */
+  
+  /* TEXT */
+  --text-main: #0f172a;     /* Slate 900 - Almost black text */
+  --text-muted: #64748b;    /* Slate 500 - Gray text */
+  
+  /* ACCENTS: Red */
+  --accent-primary: #dc2626; 
+}
+
+body {
+  color: var(--text-main);
+  background-color: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  /* Clean White Card with Shadow */
+  .card-premium {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
+  }
+
+  /* Red Button */
+  .btn-primary {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium shadow-md shadow-red-200 transition-all active:scale-95;
+  }
+}
