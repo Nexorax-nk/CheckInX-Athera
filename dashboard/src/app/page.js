@@ -1,6 +1,57 @@
-import { Users, CheckCircle, Clock, AlertTriangle } from "lucide-react"; 
+"use client";
+
+import { useState, useEffect } from "react";
+import { Users, CheckCircle, Clock, AlertTriangle, RefreshCw } from "lucide-react"; 
 
 export default function Dashboard() {
+  // 1. Setup State to hold the Real Data
+  const [loading, setLoading] = useState(true);
+  const [feed, setFeed] = useState([]);
+  const [stats, setStats] = useState({ total: 0, checkedIn: 0, pending: 0, issues: 0 });
+
+  // 2. The Function to Fetch Data from your API
+  async function refreshData() {
+    setLoading(true);
+    try {
+      // Calls the /api/data route
+      const res = await fetch("/api/data");
+      const json = await res.json();
+      
+      // Safety check: ensure 'data' is an array
+      const data = Array.isArray(json.data) ? json.data : [];
+
+      // Calculate Stats Automatically based on "Status" column
+      // Note: Make sure these strings match exactly what is in your Google Sheet
+      const checkedInCount = data.filter(u => u.status === "Checked In").length;
+      const invalidCount = data.filter(u => u.status === "Invalid" || u.status === "Duplicate").length;
+
+      setStats({
+        total: data.length,
+        checkedIn: checkedInCount,
+        pending: data.length - checkedInCount - invalidCount,
+        issues: invalidCount
+      });
+
+      // Filter recent check-ins for the feed (users with a time)
+      const recent = data
+        .filter(u => u.time && u.time !== "-") // Only show people with a timestamp
+        .slice(-5) // Get last 5
+        .reverse(); // Newest first
+      
+      setFeed(recent);
+
+    } catch (error) {
+      console.error("Failed to fetch data", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 3. Fetch immediately when page loads
+  useEffect(() => {
+    refreshData();
+  }, []);
+
   return (
     <div>
       {/* Header */}
@@ -10,42 +61,51 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">College Workshop 2026 Overview</p>
         </div>
         
-        {/* Live Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-          </span>
-          <span className="text-xs font-bold text-red-600 tracking-wide">LIVE FEED</span>
+        {/* Refresh Button & Status */}
+        <div className="flex gap-3">
+          <button 
+            onClick={refreshData} 
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            {loading ? "Syncing..." : "Refresh"}
+          </button>
+          
+          <div className="flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+            </span>
+            <span className="text-xs font-bold text-red-600 tracking-wide">LIVE FEED</span>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid (Connected to State) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card 
           label="Total Registered" 
-          value="78" 
+          value={stats.total} 
           icon={<Users size={22} />} 
-          trend="+12%"
           color="text-slate-600 bg-slate-100 border-slate-200" 
         />
         <Card 
           label="Checked In" 
-          value="45" 
+          value={stats.checkedIn} 
           icon={<CheckCircle size={22} />} 
-          trend="58%"
+          trend={`${stats.total > 0 ? Math.round((stats.checkedIn / stats.total) * 100) : 0}%`}
           color="text-red-600 bg-red-50 border-red-100" 
           highlight
         />
         <Card 
           label="Remaining" 
-          value="33" 
+          value={stats.pending} 
           icon={<Clock size={22} />} 
           color="text-slate-400 bg-slate-50 border-slate-100" 
         />
         <Card 
           label="Invalid Scans" 
-          value="2" 
+          value={stats.issues} 
           icon={<AlertTriangle size={22} />} 
           color="text-red-500 bg-transparent border-red-100" 
         />
@@ -54,7 +114,7 @@ export default function Dashboard() {
       {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left: Live Feed */}
+        {/* Left: Live Feed (Dynamic) */}
         <div className="col-span-2 card-premium p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-slate-800">Live Entry Feed</h3>
@@ -62,10 +122,21 @@ export default function Dashboard() {
           </div>
           
           <div className="space-y-3">
-            <FeedItem time="10:45 AM" name="Naveen" status="Allowed" />
-            <FeedItem time="10:42 AM" name="Pavithra" status="Duplicate" isError />
-            <FeedItem time="10:40 AM" name="Rahul" status="Allowed" />
-            <FeedItem time="10:38 AM" name="Aditya" status="Allowed" />
+            {loading ? (
+              <p className="text-center text-slate-400 py-4">Loading data...</p>
+            ) : feed.length > 0 ? (
+              feed.map((user, i) => (
+                <FeedItem 
+                  key={i} 
+                  time={user.time} 
+                  name={user.name} 
+                  status={user.status} 
+                  isError={user.status === "Invalid" || user.status === "Duplicate"}
+                />
+              ))
+            ) : (
+              <p className="text-center text-slate-400 py-4">No check-ins yet.</p>
+            )}
           </div>
         </div>
 

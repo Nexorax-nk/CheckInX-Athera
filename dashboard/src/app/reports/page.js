@@ -1,43 +1,160 @@
-import { TrendingUp, Users, Clock, AlertTriangle } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { TrendingUp, Users, UserCheck, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function ReportsPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState([]);
+  const [stats, setStats] = useState({ 
+    total: 0, 
+    checkedIn: 0, 
+    pending: 0, 
+    invalid: 0,
+    completionRate: 0 
+  });
+
+  // Fetch Real Data from Sheet
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/data");
+      const { data } = await res.json();
+      
+      if (data) {
+        setData(data);
+        
+        // Calculate Counts
+        const total = data.length;
+        const checkedIn = data.filter(u => u.status === "Checked In").length;
+        const invalid = data.filter(u => u.status === "Invalid" || u.status === "Duplicate").length;
+        const pending = total - checkedIn - invalid;
+        const rate = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+
+        setStats({ total, checkedIn, pending, invalid, completionRate: rate });
+      }
+    } catch (error) {
+      console.error("Error fetching reports", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Analytics & Reports</h2>
-        <p className="text-slate-500 text-sm">Post-event analysis and live metrics</p>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Event Reports</h2>
+          <p className="text-slate-500 text-sm">Real-time attendance metrics</p>
+        </div>
+        <button onClick={fetchData} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition">
+          <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      {/* Top Cards */}
+      {/* Top Cards (Real Data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Check-in Rate" value="82%" icon={<TrendingUp size={20} />} trend="+12%" positive={true} />
-        <StatCard title="Peak Traffic" value="10:30 AM" icon={<Clock size={20} />} trend="45 scans/min" positive={true} />
-        <StatCard title="Total Guests" value="142" icon={<Users size={20} />} trend="Registered" positive={true} />
-        <StatCard title="Issues" value="5" icon={<AlertTriangle size={20} />} trend="Requires Attention" positive={false} />
+        <StatCard 
+          title="Completion" 
+          value={`${stats.completionRate}%`} 
+          icon={<TrendingUp size={20} />} 
+          subtext="Seat occupancy"
+          color="text-emerald-600 bg-emerald-50 border-emerald-100"
+        />
+        <StatCard 
+          title="Checked In" 
+          value={stats.checkedIn} 
+          icon={<UserCheck size={20} />} 
+          subtext="Arrived guests"
+          color="text-blue-600 bg-blue-50 border-blue-100"
+        />
+        <StatCard 
+          title="Remaining" 
+          value={stats.pending} 
+          icon={<Users size={20} />} 
+          subtext="Not yet arrived"
+          color="text-slate-600 bg-slate-50 border-slate-200"
+        />
+        <StatCard 
+          title="Issues" 
+          value={stats.invalid} 
+          icon={<AlertCircle size={20} />} 
+          subtext="Invalid/Duplicate"
+          color="text-red-600 bg-red-50 border-red-100"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* Simple CSS Bar Chart: Peak Times */}
+        {/* VISUAL 1: Room Capacity (Replaces Traffic Graph) */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 mb-6">Entry Traffic (Last 4 Hours)</h3>
-          <div className="flex items-end justify-between h-48 gap-4 px-2">
-            <Bar label="9 AM" height="30%" />
-            {/* Active Bar is RED now */}
-            <Bar label="10 AM" height="85%" active />
-            <Bar label="11 AM" height="50%" />
-            <Bar label="12 PM" height="20%" />
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Workshop Capacity</h3>
+          <p className="text-sm text-slate-500 mb-8">Live visual of room occupancy</p>
+          
+          <div className="flex flex-col items-center justify-center py-4">
+            {/* Simple CSS Doughnut/Progress Circle */}
+            <div className="relative w-48 h-48 rounded-full border-16 border-slate-100 flex items-center justify-center">
+              {/* This SVG creates the Red Progress Circle */}
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle 
+                  cx="50" cy="50" r="42" 
+                  fill="transparent" 
+                  stroke="#dc2626" 
+                  strokeWidth="16"
+                  strokeDasharray={`${stats.completionRate * 2.64} 264`} 
+                  strokeLinecap="round"
+                />
+              </svg>
+              
+              <div className="text-center">
+                <span className="text-4xl font-extrabold text-slate-900">{stats.checkedIn}</span>
+                <span className="text-sm text-slate-400 block font-medium">/ {stats.total} Seats</span>
+              </div>
+            </div>
+            
+            <p className="mt-6 text-sm font-medium text-slate-600">
+              {stats.pending > 0 
+                ? `${stats.pending} guests are still expected.` 
+                : "All guests have arrived!"}
+            </p>
           </div>
         </div>
 
-        {/* CSS Progress List: Role Distribution */}
+        {/* VISUAL 2: Simple Status Breakdown (Replaces Roles) */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 mb-6">Attendee Distribution</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-6">Status Breakdown</h3>
           <div className="space-y-6">
-            <ProgressItem label="Students" value={65} color="bg-red-600" count="92" />
-            <ProgressItem label="Faculty" value={15} color="bg-slate-600" count="21" />
-            <ProgressItem label="Guests" value={12} color="bg-slate-400" count="17" />
-            <ProgressItem label="Volunteers" value={8} color="bg-slate-300" count="12" />
+            <ProgressItem 
+              label="Arrived (Checked In)" 
+              value={stats.checkedIn} 
+              total={stats.total} 
+              color="bg-emerald-500" 
+            />
+            <ProgressItem 
+              label="Pending (Not Scanned)" 
+              value={stats.pending} 
+              total={stats.total} 
+              color="bg-slate-300" 
+            />
+            <ProgressItem 
+              label="Issues (Invalid/Dup)" 
+              value={stats.invalid} 
+              total={stats.total} 
+              color="bg-red-500" 
+            />
+          </div>
+
+          {/* Mini Help Text */}
+          <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <h4 className="text-xs font-bold text-slate-900 uppercase mb-1">Organizer Note</h4>
+            <p className="text-xs text-slate-500">
+              If "Pending" guests is high after 10:30 AM, consider sending a reminder email or closing the registration desk.
+            </p>
           </div>
         </div>
       </div>
@@ -45,49 +162,37 @@ export default function ReportsPage() {
   );
 }
 
-// Components
-function StatCard({ title, value, icon, trend, positive }) {
+// Internal Components
+function StatCard({ title, value, icon, subtext, color }) {
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-slate-300 transition-colors">
+    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
       <div className="flex justify-between items-start mb-2">
-        <span className="text-slate-500 text-sm font-semibold uppercase tracking-wider">{title}</span>
-        <span className="text-slate-600 bg-slate-100 p-2 rounded-lg border border-slate-200">{icon}</span>
+        <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">{title}</span>
+        <div className={`p-2 rounded-lg border ${color}`}>
+          {icon}
+        </div>
       </div>
-      <div className="text-2xl font-extrabold text-slate-900 mb-1">{value}</div>
-      <div className={`text-xs font-bold ${positive ? "text-emerald-600" : "text-red-600"}`}>
-        {trend}
-      </div>
+      <div className="text-3xl font-extrabold text-slate-900 mb-1">{value}</div>
+      <div className="text-xs font-medium text-slate-400">{subtext}</div>
     </div>
   );
 }
 
-function Bar({ label, height, active }) {
-  return (
-    <div className="flex flex-col items-center gap-2 flex-1 group">
-      <div className="w-full relative h-full flex items-end">
-        <div 
-          className={`w-full rounded-t-sm transition-all duration-500 ${
-            active 
-              ? "bg-red-600 shadow-md shadow-red-100" // Active = Red
-              : "bg-slate-200 group-hover:bg-slate-300" // Inactive = Gray
-          }`} 
-          style={{ height }}
-        ></div>
-      </div>
-      <span className={`text-xs font-medium ${active ? "text-red-600" : "text-slate-400"}`}>{label}</span>
-    </div>
-  );
-}
-
-function ProgressItem({ label, value, color, count }) {
+function ProgressItem({ label, value, total, color }) {
+  // Prevent division by zero
+  const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+  
   return (
     <div>
       <div className="flex justify-between text-sm mb-2">
-        <span className="text-slate-700 font-medium">{label}</span>
-        <span className="text-slate-500 font-mono">{count} users</span>
+        <span className="text-slate-700 font-bold">{label}</span>
+        <span className="text-slate-500 font-mono">{value} users</span>
       </div>
-      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full ${color}`} style={{ width: `${value}%` }}></div>
+      <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${color} transition-all duration-1000 ease-out`} 
+          style={{ width: `${percentage}%` }}
+        ></div>
       </div>
     </div>
   );
